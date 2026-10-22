@@ -131,7 +131,7 @@ function Shell({ children }) {
           </span>
           {!collapsed && (
             <span>
-              codevault<span className="brand-dot">.</span>
+              ProblemPad<span className="brand-dot">.</span>
             </span>
           )}
         </Link>
@@ -232,7 +232,7 @@ function AuthPage({ mode }) {
     } catch (e) {
       setError(
         e.response?.data?.error ||
-          "Could not connect to CodeVault. Check that the server is running.",
+          "Could not connect to ProblemPad. Check that the server is running.",
       );
     } finally {
       setBusy(false);
@@ -246,7 +246,7 @@ function AuthPage({ mode }) {
             <Code2 size={17} />
           </span>
           <span>
-            codevault<span className="brand-dot">.</span>
+            ProblemPad<span className="brand-dot">.</span>
           </span>
         </Link>
         <div className="visual-copy">
@@ -305,13 +305,13 @@ function AuthPage({ mode }) {
             <span className="brand-mark">
               <Code2 size={17} />
             </span>{" "}
-            codevault<span className="brand-dot">.</span>
+            ProblemPad<span className="brand-dot">.</span>
           </div>
           <span className="eyebrow">
             {mode === "signup" ? "GET STARTED" : "WELCOME BACK"}
           </span>
           <h2>
-            {mode === "signup" ? "Create your account" : "Sign in to CodeVault"}
+            {mode === "signup" ? "Create your account" : "Sign in to ProblemPad"}
           </h2>
           <p className="form-sub">
             {mode === "signup"
@@ -364,7 +364,7 @@ function AuthPage({ mode }) {
           <div className="auth-switch">
             {mode === "signup"
               ? "Already have an account?"
-              : "New to CodeVault?"}{" "}
+              : "New to ProblemPad?"}{" "}
             <Link to={mode === "signup" ? "/login" : "/signup"}>
               {mode === "signup" ? "Sign in" : "Create an account"}
             </Link>

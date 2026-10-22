@@ -1,6 +1,6 @@
-# CodeVault
+# ProblemPad
 
-CodeVault is a personal DSA problem library with an integrated editor, saved drafts, test cases, Gemini-assisted problem parsing and candidate test generation, and OnlineCompiler.io-backed code execution.
+ProblemPad is a personal DSA problem library with an integrated editor, saved drafts, test cases, Gemini-assisted problem parsing and candidate test generation, and OnlineCompiler.io-backed code execution.
 
 ## Stack and layout
 
@@ -10,7 +10,7 @@ CodeVault is a personal DSA problem library with an integrated editor, saved dra
 
 ## Setup
 
-Node.js 20+ is recommended. The workspace root `.env` is loaded by the backend. The provided `.env` is intentionally ignored by Git. Set `MONGO_URI` and `GOOGLE_API_KEY` there; CodeVault maps the latter to `GEMINI_API_KEY` inside the backend. Add a long random `JWT_SECRET` before using the app outside local development. OnlineCompiler.io execution requires `ONLINECOMPILER_API_KEY`; its Judge0-compatible endpoint is used by default.
+Node.js 20+ is recommended. The workspace root `.env` is loaded by the backend. The provided `.env` is intentionally ignored by Git. Set `MONGO_URI` and `GOOGLE_API_KEY` there; ProblemPad maps the latter to `GEMINI_API_KEY` inside the backend. Add a long random `JWT_SECRET` before using the app outside local development. OnlineCompiler.io execution requires `ONLINECOMPILER_API_KEY`; its Judge0-compatible endpoint is used by default.
 
 For local development, run MongoDB separately or use MongoDB Atlas. If using Atlas, allow your machine's IP in Atlas Network Access and use the Atlas connection string as `MONGO_URI`.
 
