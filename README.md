@@ -1,18 +1,18 @@
 # CodeVault
 
-CodeVault is a personal DSA problem library with an integrated editor, saved drafts, test cases, Gemini-assisted problem parsing and candidate test generation, and Judge0-backed code execution.
+CodeVault is a personal DSA problem library with an integrated editor, saved drafts, test cases, Gemini-assisted problem parsing and candidate test generation, and OnlineCompiler.io-backed code execution.
 
 ## Stack and layout
 
 - `frontend/`: React 19, Vite, React Router, Tailwind CSS, Monaco, Axios and Lucide.
-- `backend/`: Express ES modules, Mongoose, JWT, bcrypt, Zod, Google Gen AI SDK and Judge0 HTTP integration.
+- `backend/`: Express ES modules, Mongoose, JWT, bcrypt, Zod, Google Gen AI SDK and OnlineCompiler.io execution integration.
 - MongoDB stores users, problems and test cases, collections, drafts and submissions.
 
 ## Setup
 
-Node.js 20+ is recommended. The workspace root `.env` is loaded by the backend. The provided `.env` is intentionally ignored by Git. Set `MONGO_URI` and `GOOGLE_API_KEY` there; CodeVault maps the latter to `GEMINI_API_KEY` inside the backend. Add a long random `JWT_SECRET` before using the app outside local development. Judge0 execution requires `JUDGE0_API_URL` and `JUDGE0_API_KEY`; without them, Run and Submit return a clear configuration error.
+Node.js 20+ is recommended. The workspace root `.env` is loaded by the backend. The provided `.env` is intentionally ignored by Git. Set `MONGO_URI` and `GOOGLE_API_KEY` there; CodeVault maps the latter to `GEMINI_API_KEY` inside the backend. Add a long random `JWT_SECRET` before using the app outside local development. OnlineCompiler.io execution requires `ONLINECOMPILER_API_KEY`; its Judge0-compatible endpoint is used by default.
 
-To start a local database, run `docker compose up -d mongodb`. If using MongoDB Atlas, allow your machine's IP in Atlas Network Access and use the Atlas connection string as `MONGO_URI`.
+For local development, run MongoDB separately or use MongoDB Atlas. If using Atlas, allow your machine's IP in Atlas Network Access and use the Atlas connection string as `MONGO_URI`.
 
 Install and run:
 
@@ -29,7 +29,9 @@ Frontend: `http://localhost:5173`. API: `http://localhost:4000/api/health`.
 
 Gemini is called only from the backend using `GOOGLE_API_KEY`/`GEMINI_API_KEY`. Generated test cases are labeled unverified because model-provided expected outputs are not independently checked. Review them before use. Parsing and test generation are limited to 10 calls/hour per IP.
 
-Code execution sends source and input to the configured Judge0 instance. Set `JUDGE0_API_URL` to the Judge0 submissions API base URL and configure the matching auth token in `JUDGE0_API_KEY`. Never expose these values to the browser. The Judge0 integration currently sends code with stdin and provider expected-output comparison; function-only problems may need a language-specific harness added to the problem definition.
+Code execution sends source and input to OnlineCompiler.io's Judge0-compatible submissions endpoint (`https://api.onlinecompiler.io/api/judge0`). Add your REST API key as `ONLINECOMPILER_API_KEY` in the project root `.env`; set `ONLINECOMPILER_API_URL` only if you need to override the endpoint. The backend keeps the key server-side and sends code with stdin, then compares the returned output with each expected output. Function-only problems may need a language-specific harness added to the problem definition. Legacy `JUDGE0_API_KEY` and `JUDGE0_API_URL` variables remain supported for existing configurations.
+
+By default, CORS accepts requests from any frontend origin. Set `CLIENT_ORIGIN` in the backend host to the frontend's exact origin (for example, `https://your-app.onrender.com`, with no path) when you are ready to restrict browser access. Multiple frontend origins can be comma-separated; localhost origins remain enabled for development.
 
 ## Security and current limits
 

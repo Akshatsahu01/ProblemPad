@@ -55,6 +55,12 @@ import {
 
 const AuthContext = createContext(null);
 const useAuth = () => useContext(AuthContext);
+const asText = (value) => {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value);
+};
 const IconButton = ({ children, ...p }) => (
   <button className="icon-btn" {...p}>
     {children}
@@ -782,6 +788,11 @@ function ProblemForm() {
       setForm({
         ...form,
         ...data.problem,
+        title: asText(data.problem.title ?? form.title),
+        statement: asText(data.problem.statement ?? form.statement),
+        inputFormat: asText(data.problem.inputFormat ?? form.inputFormat),
+        outputFormat: asText(data.problem.outputFormat ?? form.outputFormat),
+        constraints: asText(data.problem.constraints ?? form.constraints),
         topics: Array.isArray(data.problem.topics)
           ? data.problem.topics.join(", ")
           : form.topics,
@@ -927,7 +938,7 @@ function ProblemForm() {
             </span>
             <div className="markdown">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {form.statement ||
+                {asText(form.statement) ||
                   "*Your problem statement preview will appear here.*"}
               </ReactMarkdown>
             </div>
@@ -935,7 +946,7 @@ function ProblemForm() {
               <>
                 <h4>Constraints</h4>
                 <div className="markdown">
-                  <ReactMarkdown>{form.constraints}</ReactMarkdown>
+                  <ReactMarkdown>{asText(form.constraints)}</ReactMarkdown>
                 </div>
               </>
             )}
@@ -970,6 +981,9 @@ function Workspace() {
     [tests, setTests] = useState([]),
     [result, setResult] = useState(null),
     [busy, setBusy] = useState(false),
+    [generating, setGenerating] = useState(false),
+    [generationComplete, setGenerationComplete] = useState(false),
+    [generationMessage, setGenerationMessage] = useState(""),
     [tab, setTab] = useState("testcases"),
     [draftReady, setDraftReady] = useState(false),
     [error, setError] = useState("");
@@ -1040,18 +1054,35 @@ function Workspace() {
       setError(e.response?.data?.error || "Could not add test");
     }
   };
+  const aiAlreadyGenerated =
+    generationComplete ||
+    Boolean(problem?.aiTestsGeneratedAt) ||
+    tests.some((testCase) => testCase.source === "ai");
   const gen = async () => {
-    setBusy(true);
+    if (generating || aiAlreadyGenerated) return;
+    setGenerating(true);
+    setGenerationMessage("");
     try {
       const { data } = await api.post(`/problems/${id}/generate-tests`);
       setTests((v) => [...v, ...data.tests]);
-      setError(
+      setGenerationComplete(true);
+      setProblem((current) => ({
+        ...current,
+        aiTestsGeneratedAt: data.aiTestsGeneratedAt || new Date().toISOString(),
+      }));
+      setGenerationMessage(
         "AI candidates are unverified; review expected outputs before relying on them.",
       );
     } catch (e) {
-      setError(e.response?.data?.error || "Generation failed");
+      const message = e.response?.data?.error || e.message || "Generation failed";
+      setGenerationMessage(message);
+      if (e.response?.status === 409 && message.includes("already been generated")) {
+        setGenerationComplete(true);
+        api.get(`/problems/${id}`).then((r) => setProblem(r.data.problem)).catch(() => {});
+        api.get(`/problems/${id}/test-cases`).then((r) => setTests(r.data.tests)).catch(() => {});
+      }
     } finally {
-      setBusy(false);
+      setGenerating(false);
     }
   };
   const delTest = async (t) => {
@@ -1134,26 +1165,26 @@ function Workspace() {
           <div className="problem-scroll">
             <div className="markdown problem-markdown">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {problem.statement ||
+                {asText(problem.statement) ||
                   "*No problem statement has been added yet.*"}
               </ReactMarkdown>
             </div>
             {problem.inputFormat && (
               <>
                 <h3>Input format</h3>
-                <p>{problem.inputFormat}</p>
+                <p>{asText(problem.inputFormat)}</p>
               </>
             )}
             {problem.outputFormat && (
               <>
                 <h3>Output format</h3>
-                <p>{problem.outputFormat}</p>
+                <p>{asText(problem.outputFormat)}</p>
               </>
             )}
             {problem.constraints && (
               <>
                 <h3>Constraints</h3>
-                <div className="constraint-box">{problem.constraints}</div>
+                <div className="constraint-box">{asText(problem.constraints)}</div>
               </>
             )}
             <div className="tests-panel" id="tests-panel">
@@ -1201,13 +1232,31 @@ function Workspace() {
                 </details>
               ))}
               <div className="test-actions">
-                <button className="text-link" onClick={gen} disabled={busy}>
-                  <BrainCircuit size={15} /> Generate with AI
+                <button
+                  className="text-link"
+                  onClick={gen}
+                  disabled={busy || generating || aiAlreadyGenerated}
+                  aria-live="polite"
+                >
+                  <BrainCircuit size={15} />
+                  {generating
+                    ? "Generating test cases…"
+                    : aiAlreadyGenerated
+                      ? "AI test cases generated"
+                      : "Generate with AI"}
                 </button>
                 <button className="text-link" onClick={addTest}>
                   <Plus size={15} /> Add test
                 </button>
               </div>
+              {generationMessage && (
+                <div
+                  className={generationComplete ? "ai-generation-notice" : "error-banner"}
+                  role="status"
+                >
+                  {generationMessage}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -1350,13 +1399,46 @@ function Workspace() {
                       </span>
                     </div>
                     {result.results.map((r, i) => (
-                      <div className="run-case" key={i}>
-                        <strong>Case {i + 1}</strong>
-                        <span className={r.passed ? "pass-text" : "fail-text"}>
-                          {r.passed ? "Passed" : "Failed"}
-                        </span>
-                        {r.stderr && <pre>{r.stderr}</pre>}
-                      </div>
+                      <details className="run-case" key={i} open={!r.passed}>
+                        <summary>
+                          <strong>Case {i + 1}</strong>
+                          <span className={r.passed ? "pass-text" : "fail-text"}>
+                            {r.passed
+                              ? "Passed"
+                              : r.compileError
+                                ? "Compile error"
+                                : r.runtimeError
+                                  ? "Runtime error"
+                                  : "Wrong answer"}
+                          </span>
+                          {!r.passed && !r.compileError && !r.runtimeError && (
+                            <small>Expected and actual output</small>
+                          )}
+                          <ChevronDown size={14} />
+                        </summary>
+                        {!r.passed && (
+                          <div className="run-case-details">
+                            {!r.compileError && !r.runtimeError && (
+                              <div className="output-comparison">
+                                <div>
+                                  <label>Expected output</label>
+                                  <pre>{r.expected || "(empty output)"}</pre>
+                                </div>
+                                <div>
+                                  <label>Your output</label>
+                                  <pre>{r.actual || "(empty output)"}</pre>
+                                </div>
+                              </div>
+                            )}
+                            {r.stderr && (
+                              <div className="execution-error">
+                                <label>{r.compileError ? "Compiler error" : "Runtime error"}</label>
+                                <pre>{r.stderr}</pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </details>
                     ))}
                   </>
                 ) : (
